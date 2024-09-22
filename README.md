@@ -9,3 +9,4 @@ the same works the other way when the player leaves some sprites they will deact
 In addition, I added a periodic check by the script for newly added sprites, so that it won't happen that when I add many new objects with sprites they will be missed.
 The script has a list through which I can manually add objects, but it exists so in addition, the script itself collects every object that has a “Sprite Renderer”.
 
+![0922](https://github.com/user-attachments/assets/590191e2-fc5a-4f3d-9446-6f6cc7db687b)

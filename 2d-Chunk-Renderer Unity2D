@@ -1,0 +1,103 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class SimpleVisibilityManager : MonoBehaviour
+{
+    public Camera mainCamera;
+    public List<GameObject> objectsToTrack = new List<GameObject>();
+    public float margin = 0.8f;
+    public float disableDelay = 0.4f;
+
+    private Dictionary<GameObject, Coroutine> disableCoroutines = new Dictionary<GameObject, Coroutine>();
+    private Dictionary<GameObject, SpriteRenderer> spriteRenderers = new Dictionary<GameObject, SpriteRenderer>();
+
+    void Start()
+    {
+        if (mainCamera == null) mainCamera = Camera.main;
+
+        if (objectsToTrack.Count == 0) AddAllSpriteRenderersInScene();
+        CacheSpriteRenderers();
+    }
+
+    void Update()
+    {
+        foreach (var obj in objectsToTrack)
+        {
+            if (obj == null) continue;
+
+            SpriteRenderer spriteRenderer;
+            if (!spriteRenderers.TryGetValue(obj, out spriteRenderer)) continue;
+
+            if (IsObjectVisibleWithMargin(obj))
+            {
+                EnableSprite(spriteRenderer, obj);
+            }
+            else
+            {
+                StartDisableCoroutine(spriteRenderer, obj);
+            }
+        }
+    }
+
+    void AddAllSpriteRenderersInScene()
+    {
+        foreach (var sprite in FindObjectsOfType<SpriteRenderer>())
+        {
+            if (!objectsToTrack.Contains(sprite.gameObject))
+            {
+                objectsToTrack.Add(sprite.gameObject);
+            }
+        }
+    }
+
+    void CacheSpriteRenderers()
+    {
+        foreach (var obj in objectsToTrack)
+        {
+            if (obj == null) continue;
+            var spriteRenderer = obj.GetComponent<SpriteRenderer>();
+            if (spriteRenderer != null) spriteRenderers[obj] = spriteRenderer;
+        }
+    }
+
+    bool IsObjectVisibleWithMargin(GameObject obj)
+    {
+        var screenPoint = mainCamera.WorldToViewportPoint(obj.transform.position);
+        return screenPoint.z > 0 && screenPoint.x > -margin && screenPoint.x < 1 + margin && screenPoint.y > -margin && screenPoint.y < 1 + margin;
+    }
+
+    void EnableSprite(SpriteRenderer spriteRenderer, GameObject obj)
+    {
+        if (!spriteRenderer.enabled) spriteRenderer.enabled = true;
+        if (disableCoroutines.ContainsKey(obj))
+        {
+            StopCoroutine(disableCoroutines[obj]);
+            disableCoroutines.Remove(obj);
+        }
+    }
+
+    void StartDisableCoroutine(SpriteRenderer spriteRenderer, GameObject obj)
+    {
+        if (!disableCoroutines.ContainsKey(obj))
+            disableCoroutines[obj] = StartCoroutine(DisableAfterDelay(spriteRenderer, obj));
+    }
+
+    IEnumerator DisableAfterDelay(SpriteRenderer spriteRenderer, GameObject obj)
+    {
+        yield return new WaitForSeconds(disableDelay);
+        if (spriteRenderer != null) spriteRenderer.enabled = false;
+        disableCoroutines.Remove(obj);
+    }
+
+    public void AddObjectToTrack(GameObject newObject)
+    {
+        if (newObject != null && !objectsToTrack.Contains(newObject))
+        {
+            objectsToTrack.Add(newObject);
+            var spriteRenderer = newObject.GetComponent<SpriteRenderer>();
+            if (spriteRenderer != null) spriteRenderers[newObject] = spriteRenderer;
+        }
+    }
+}
+
